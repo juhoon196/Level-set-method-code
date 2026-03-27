@@ -1,0 +1,16 @@
+========================================
+3D Level-Set Deformation Test
+========================================
+
+Grid: 64 x 64 x 64
+dt: 1.000000e-03, T: 1.5000
+
+
+Simulation Complete
+Total steps: 1501
+Final L2 Error: 9.158634e-04
+Initial Volume: 0.014165
+Final Volume: 0.014245
+Volume Conservation Error: 0.5647%
+Wall time: 15.990 s
+Time per step: 10.653 ms

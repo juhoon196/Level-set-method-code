@@ -1,0 +1,35 @@
+========================================
+G-Equation Level-Set Solver (MPI)
+========================================
+
+MPI Configuration:
+  Number of processes: 32
+  Domain decomposition: 1D in Y direction
+
+Simulation Parameters:
+  Grid size: 1601 x 1601
+  dx: 6.250000e-04, dy: 6.250000e-04
+  dt: 1.250000e-04
+  Final time: 6.2832
+  CFL: 0.20
+  Velocity: u=1.00, v=0.00
+  Flame speed (S_L): 0.00
+  Reinitialization: Disabled
+
+Test case: Zalesak's Slotted Disk Rotation
+Initial interface area: 0.058192
+
+
+Final Results:
+  L2 Error: 8.243448e-02
+  Shape Error: 2.282323e-04
+  Initial Area: 0.058192
+  Final Area: 0.058205
+  Area Change: 0.022823%
+
+Timing Results:
+  Total steps: 50266
+  Wall time: 913.146 s
+  Time per step: 18.166 ms
+  Processes: 32
+========================================

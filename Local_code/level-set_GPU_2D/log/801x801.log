@@ -1,0 +1,33 @@
+========================================
+G-Equation Level-Set Solver (Standalone)
+========================================
+
+CUDA Device: NVIDIA GeForce RTX 4090
+
+Simulation Parameters:
+  Grid size: 801 x 801
+  dx: 1.250000e-03, dy: 1.250000e-03
+  dt: 2.500000e-04
+  Final time: 6.2832
+  CFL: 0.20
+  Velocity: u=1.00, v=0.00
+  Flame speed (S_L): 0.00
+  Reinitialization: Disabled
+
+Test case: Zalesak's Slotted Disk Rotation
+Initial interface area: 0.058167
+
+
+Final Results:
+  L2 Error: 8.250949e-02
+  Shape Error: 2.471325e-03
+  Initial Area: 0.058167
+  Final Area: 0.058311
+  Area Change: 0.247132%
+
+Timing Results:
+  Total steps: 25133
+  GPU time: 59841.113 ms (59.841 s)
+  Wall time: 59.841 s
+  Time per step: 2.381 ms
+========================================

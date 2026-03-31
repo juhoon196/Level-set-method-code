@@ -1,0 +1,35 @@
+========================================
+G-Equation Level-Set Solver 3D (MPI)
+========================================
+
+MPI Configuration:
+  Number of processes: 8
+  Domain decomposition: 1D in Y direction
+
+Simulation Parameters:
+  Grid size: 64 x 64 x 64
+  dx: 1.587302e-02, dy: 1.587302e-02, dz: 1.587302e-02
+  dt: 1.000000e-03
+  Final time: 1.5000
+  CFL: 0.20
+  Velocity: u=0.00, v=0.00, w=0.00
+  Flame speed (S_L): 0.00
+  Reinitialization: Disabled
+
+Test case: Sphere Deformation
+Initial interface volume: 0.014165
+
+
+Final Results:
+  L2 Error: 9.158634e-04
+  Shape Error: 5.646527e-03
+  Initial Volume: 0.014165
+  Final Volume: 0.014245
+  Volume Change: 0.564653%
+
+Timing Results:
+  Total steps: 1501
+  Wall time: 8.992 s
+  Time per step: 5.990 ms
+  Processes: 8
+========================================

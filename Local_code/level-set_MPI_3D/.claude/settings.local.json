@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /mnt/c/Users/user/Desktop/Level-set-method-code-main/Local_code/level-set_GPU_2D/code_structure_analysis.*)",
+      "Bash(ls -la /mnt/c/Users/user/Desktop/Level-set-method-code-main/Local_code/level-set_GPU_3D/code_structure_analysis.*)",
+      "Bash(ls -la /mnt/c/Users/user/Desktop/Level-set-method-code-main/Local_code/level-set_MPI_2D/code_structure_analysis.*)",
+      "Bash(ls -la /mnt/c/Users/user/Desktop/Level-set-method-code-main/Local_code/level-set_MPI_GPU_3D/code_structure_analysis.*)",
+      "Bash(ls -la /mnt/c/Users/user/Desktop/Level-set-method-code-main/Hangang_code/level-set_MPI_GPU_3D_Hangang/code_structure_analysis.*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

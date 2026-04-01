@@ -1,38 +1,24 @@
 #!/bin/bash
 #SBATCH -J g_equation
-#SBATCH -N 2
+#SBATCH -N 1
 #SBATCH -t 1:00:00
-#SBATCH -p gpu
+#SBATCH -p combust 
 #SBATCH --exclusive
 #SBATCH --gres=gpu:2
 #SBATCH --ntasks-per-node=2
 #SBATCH --hint=nomultithread
+#SBATCH --output=log/slurm-%j.out
+#SBATCH --error=log/slurm-%j.err
 
-# ===== 모듈 로드 =====
 source $MODULESHOME/init/bash
 module purge
-module load cuda/12.8
-module load openmpi/5.0.10
-module load gcc-native/14
-module load libfabric/2.3.1
+module load PrgEnv-nvidia
+module load craype-arm-grace
 
-# ===== 네트워크 환경 변수 =====
-export NCCL_CROSS_NIC=1
-export NCCL_SOCKET_IFNAME=hsn
-export NCCL_NET_GDR_LEVEL=PHB
-export NCCL_COLLNET_ENABLE=1
-export NCCL_NET="AWS Libfabric"
-export FI_MR_CACHE_MONITOR=memhooks
-export FI_CXI_RX_MATCH_MODE=software
-export FI_PROVIDER=cxi
-export FI_CXI_RDZV_PROTO=alt_read
-export FI_CXI_RDZV_GET_MIN=4096
+export LD_LIBRARY_PATH=/opt/cray/pe/mpich/9.0.1/ofi/nvidia/23.3/lib:$LD_LIBRARY_PATH
 
-# ===== 실행 =====
-SOLVER=/scratch/paop41a05/juhoon/level-set_MPI_GPU_3D/g_equation_solver_mpi_gpu
+LOG_DIR=$(pwd)/log
+mkdir -p $LOG_DIR
+SOLVER=$(pwd)/g_equation_solver_mpi_gpu
 
-srun --mpi=pmix -N 2 --ntasks-per-node=4 --cpu-bind=none \
-    nsys profile \
-    --output=/scratch/paop41a05/juhoon/level-set_MPI_GPU_3D/log/profile_%q{SLURM_PROCID} \
-    --trace=cuda,mpi,nvtx \
-    $SOLVER
+srun --mpi=cray_shasta --cpu-bind=none $SOLVER

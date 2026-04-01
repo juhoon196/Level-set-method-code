@@ -322,9 +322,9 @@ int main(int argc, char* argv[]) {
                 printf("Step %6d: t=%.6f  dt=%.3e  L2=%.6e  Vol=%.6f\n",
                        step, current_time, params.dt, l2, vol);
 
-            char fname[256];
-            snprintf(fname, sizeof(fname), "output/G_step_%06d.bin", step);
-            gatherAndSave(fname, d_G, params);
+            // char fname[256];
+            // snprintf(fname, sizeof(fname), "output/G_step_%06d.bin", step);
+            // gatherAndSave(fname, d_G, params);
         }
     }
 

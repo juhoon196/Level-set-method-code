@@ -34,29 +34,32 @@ __global__ void computeRHS(const double* __restrict__ G,
         k < params.nghost || k >= params.nz + params.nghost)
         return;
 
-    int index = idx(i, j, k, params.nx_total, params.ny_total);
-    double u_eff{u[index]};
-    double v_eff{v[index]};
-    double w_eff{w[index]};
+    const int nx_tot = params.nx_total;
+    const int ny_tot = params.ny_total;
+    const int index = idx(i, j, k, nx_tot, ny_tot);
 
-    const double eps{params.epsilon};
+    double u_eff = u[index];
+    double v_eff = v[index];
+    double w_eff = w[index];
+
+    const double eps = params.epsilon;
     if (params.s_l > eps) {
-        double dGdx_c = (G[idx(i+1,j,k,params.nx_total,params.ny_total)] -
-                         G[idx(i-1,j,k,params.nx_total,params.ny_total)]) / (2.0*params.dx);
-        double dGdy_c = (G[idx(i,j+1,k,params.nx_total,params.ny_total)] -
-                         G[idx(i,j-1,k,params.nx_total,params.ny_total)]) / (2.0*params.dy);
-        double dGdz_c = (G[idx(i,j,k+1,params.nx_total,params.ny_total)] -
-                         G[idx(i,j,k-1,params.nx_total,params.ny_total)]) / (2.0*params.dz);
+        double dGdx_c = (G[idx(i+1, j, k, nx_tot, ny_tot)] -
+                         G[idx(i-1, j, k, nx_tot, ny_tot)]) / (2.0 * params.dx);
+        double dGdy_c = (G[idx(i, j+1, k, nx_tot, ny_tot)] -
+                         G[idx(i, j-1, k, nx_tot, ny_tot)]) / (2.0 * params.dy);
+        double dGdz_c = (G[idx(i, j, k+1, nx_tot, ny_tot)] -
+                         G[idx(i, j, k-1, nx_tot, ny_tot)]) / (2.0 * params.dz);
 
-        double grad_mag_inv{rsqrt(eps + dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c)};
-        u_eff = u_eff - (params.s_l * dGdx_c) * grad_mag_inv;
-        v_eff = v_eff - (params.s_l * dGdy_c) * grad_mag_inv;
-        w_eff = w_eff - (params.s_l * dGdz_c) * grad_mag_inv;
+        double grad_mag_inv = rsqrt(eps + dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c);
+        u_eff -= (params.s_l * dGdx_c) * grad_mag_inv;
+        v_eff -= (params.s_l * dGdy_c) * grad_mag_inv;
+        w_eff -= (params.s_l * dGdz_c) * grad_mag_inv;
     }
 
-    double dGdx = weno5_dx(G, i, j, k, u_eff, params.dx, params.nx_total, params.ny_total);
-    double dGdy = weno5_dy(G, i, j, k, v_eff, params.dy, params.nx_total, params.ny_total);
-    double dGdz = weno5_dz(G, i, j, k, w_eff, params.dz, params.nx_total, params.ny_total);
+    double dGdx = weno5_dx(G, i, j, k, u_eff, params.dx, nx_tot, ny_tot);
+    double dGdy = weno5_dy(G, i, j, k, v_eff, params.dy, nx_tot, ny_tot);
+    double dGdz = weno5_dz(G, i, j, k, w_eff, params.dz, nx_tot, ny_tot);
 
     G_rhs[index] = -(u_eff * dGdx + v_eff * dGdy + w_eff * dGdz);
 }

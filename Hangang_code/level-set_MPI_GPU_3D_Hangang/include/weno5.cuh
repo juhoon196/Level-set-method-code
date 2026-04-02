@@ -24,7 +24,7 @@ __constant__ double WENO_D1 = 0.6;
 __constant__ double WENO_D2 = 0.3;
 
 // Epsilon for smoothness indicator (prevents division by zero)
-__constant__ double WENO_EPSILON = 1.0e-6;
+constexpr double WENO_EPSILON = 1.0e-6;
 
 //=============================================================================
 // WENO-5 Device Functions (reuse 1D reconstruction)
@@ -55,29 +55,35 @@ __device__ inline void computeSmoothnessIndicators(const double* v, double* beta
 /**
  * @brief Compute WENO-5 reconstruction at cell interface (left-biased)
  */
-__device__ inline double weno5_left(const double* v) {
+__device__ inline double weno5_left(const double* __restrict__ v) {
     // Smoothness indicators
     double beta[3];
     computeSmoothnessIndicators(v, beta);
-
+    
     // Compute nonlinear weights
-    double alpha0 = 0.1 / ((WENO_EPSILON + beta[0]) * (WENO_EPSILON + beta[0]));
-    double alpha1 = 0.6 / ((WENO_EPSILON + beta[1]) * (WENO_EPSILON + beta[1]));
-    double alpha2 = 0.3 / ((WENO_EPSILON + beta[2]) * (WENO_EPSILON + beta[2]));
+    constexpr double eps_sq{WENO_EPSILON * WENO_EPSILON};
 
-    double sum_alpha = alpha0 + alpha1 + alpha2;
+    // double alpha0 = 0.1 / ((WENO_EPSILON + beta[0]) * (WENO_EPSILON + beta[0]));
+    // double alpha1 = 0.6 / ((WENO_EPSILON + beta[1]) * (WENO_EPSILON + beta[1]));
+    // double alpha2 = 0.3 / ((WENO_EPSILON + beta[2]) * (WENO_EPSILON + beta[2]));
 
-    double omega0 = alpha0 / sum_alpha;
-    double omega1 = alpha1 / sum_alpha;
-    double omega2 = alpha2 / sum_alpha;
+    double alpha0 = 0.1 / __fma_rn(beta[0], beta[0], eps_sq);
+    double alpha1 = 0.6 / __fma_rn(beta[1], beta[1], eps_sq);
+    double alpha2 = 0.3 / __fma_rn(beta[2], beta[2], eps_sq);
+
+    double sum_alpha_inv = 1.0 / (alpha0 + alpha1 + alpha2);
+
+    double omega0 = alpha0 * sum_alpha_inv;
+    double omega1 = alpha1 * sum_alpha_inv;
+    double omega2 = alpha2 * sum_alpha_inv;
 
     // Candidate polynomials
-    double p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]) / 6.0;
-    double p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]) / 6.0;
-    double p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]) / 6.0;
+    double p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]);
+    double p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]);
+    double p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]);
 
     // Weighted combination
-    return omega0 * p0 + omega1 * p1 + omega2 * p2;
+    return (omega0 * p0 + omega1 * p1 + omega2 * p2) / 6.0;
 }
 
 /**
@@ -92,23 +98,29 @@ __device__ inline double weno5_right(const double* v) {
     computeSmoothnessIndicators(v_mirror, beta);
 
     // Compute nonlinear weights with mirrored optimal weights
-    double alpha0 = 0.3 / ((WENO_EPSILON + beta[0]) * (WENO_EPSILON + beta[0]));
-    double alpha1 = 0.6 / ((WENO_EPSILON + beta[1]) * (WENO_EPSILON + beta[1]));
-    double alpha2 = 0.1 / ((WENO_EPSILON + beta[2]) * (WENO_EPSILON + beta[2]));
+    constexpr double eps_sq{WENO_EPSILON * WENO_EPSILON};
 
-    double sum_alpha = alpha0 + alpha1 + alpha2;
+    // double alpha0 = 0.3 / ((WENO_EPSILON + beta[0]) * (WENO_EPSILON + beta[0]));
+    // double alpha1 = 0.6 / ((WENO_EPSILON + beta[1]) * (WENO_EPSILON + beta[1]));
+    // double alpha2 = 0.1 / ((WENO_EPSILON + beta[2]) * (WENO_EPSILON + beta[2]));
+    
+    double alpha0 = 0.3 / __fma_rn(beta[0], beta[0], eps_sq);
+    double alpha1 = 0.6 / __fma_rn(beta[1], beta[1], eps_sq);
+    double alpha2 = 0.1 / __fma_rn(beta[2], beta[2], eps_sq);
 
-    double omega0 = alpha0 / sum_alpha;
-    double omega1 = alpha1 / sum_alpha;
-    double omega2 = alpha2 / sum_alpha;
+    double sum_alpha_inv = 1.0 / (alpha0 + alpha1 + alpha2);
+
+    double omega0 = alpha0 * sum_alpha_inv;
+    double omega1 = alpha1 * sum_alpha_inv;
+    double omega2 = alpha2 * sum_alpha_inv;
 
     // Candidate polynomials for right reconstruction
-    double p0 = (11.0 * v[2] - 7.0 * v[3] + 2.0 * v[4]) / 6.0;
-    double p1 = (2.0 * v[1] + 5.0 * v[2] - v[3]) / 6.0;
-    double p2 = (-v[0] + 5.0 * v[1] + 2.0 * v[2]) / 6.0;
+    double p0 = (11.0 * v[2] - 7.0 * v[3] + 2.0 * v[4]);
+    double p1 = (2.0 * v[1] + 5.0 * v[2] - v[3]);
+    double p2 = (-v[0] + 5.0 * v[1] + 2.0 * v[2]);
 
     // Weighted combination
-    return omega0 * p0 + omega1 * p1 + omega2 * p2;
+    return (omega0 * p0 + omega1 * p1 + omega2 * p2) / 6.0;
 }
 
 //=============================================================================

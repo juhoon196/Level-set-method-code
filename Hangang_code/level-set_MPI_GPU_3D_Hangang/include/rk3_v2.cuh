@@ -49,9 +49,9 @@ __global__ void computeRHS(const double* __restrict__ G,
                          G[idx(i,j,k-1,params.nx_total,params.ny_total)]) / (2.0*params.dz);
 
         double grad_mag_inv{rsqrt(eps + dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c)};
-        u_eff = (u_eff - params.s_l * dGdx_c) * grad_mag_inv;
-        v_eff = (v_eff - params.s_l * dGdy_c) * grad_mag_inv;
-        w_eff = (w_eff - params.s_l * dGdz_c) * grad_mag_inv;
+        u_eff = u_eff - (params.s_l * dGdx_c) * grad_mag_inv;
+        v_eff = v_eff - (params.s_l * dGdy_c) * grad_mag_inv;
+        w_eff = w_eff - (params.s_l * dGdz_c) * grad_mag_inv;
     }
 
     double dGdx = weno5_dx(G, i, j, k, u_eff, params.dx, params.nx_total, params.ny_total);

@@ -28,33 +28,47 @@ __global__ void computeRHS(const double* __restrict__ G,
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     int k = blockIdx.z * blockDim.z + threadIdx.z;
 
+    const int nx_tot{params.nx_total};
+    const int ny_tot{params.ny_total};
+    
+    __shared__ double g_tile[10][10][10];
+    for (int kk{}; kk < 10; kk += blockDim.z) {
+        for (int jj{}; jj < 10; jj += blockDim.y) {
+            for (int ii{}; ii < 10; ii += blockDim.x) {
+                g_tile[kk][jj][jj] = G[idx(ii-1, jj-1, kk-1, nx_tot, ny_tot)];
+            }
+        }
+    }
+    __syncthreads();
+
     // Interior only (params.ny is local_ny)
     if (i < params.nghost || i >= params.nx + params.nghost ||
         j < params.nghost || j >= params.ny + params.nghost ||
         k < params.nghost || k >= params.nz + params.nghost)
         return;
 
-    const int nx_tot = params.nx_total;
-    const int ny_tot = params.ny_total;
     const int index = idx(i, j, k, nx_tot, ny_tot);
+    double u_eff{u[index]};
+    double v_eff{v[index]};
+    double w_eff{w[index]};
 
-    double u_eff = u[index];
-    double v_eff = v[index];
-    double w_eff = w[index];
-
-    const double eps = params.epsilon;
+    const double eps{params.epsilon};
     if (params.s_l > eps) {
-        double dGdx_c = (G[idx(i+1, j, k, nx_tot, ny_tot)] -
-                         G[idx(i-1, j, k, nx_tot, ny_tot)]) / (2.0 * params.dx);
-        double dGdy_c = (G[idx(i, j+1, k, nx_tot, ny_tot)] -
-                         G[idx(i, j-1, k, nx_tot, ny_tot)]) / (2.0 * params.dy);
-        double dGdz_c = (G[idx(i, j, k+1, nx_tot, ny_tot)] -
-                         G[idx(i, j, k-1, nx_tot, ny_tot)]) / (2.0 * params.dz);
+        //double dGdx_c = (G[idx(i+1,j,  k,nx_tot,ny_tot)] -
+        //                 G[idx(i-1,j,  k,nx_tot,ny_tot)]) / (2.0*params.dx);
+        //double dGdy_c = (G[idx(i,  j+1,k,nx_tot,ny_tot)] -
+        //                 G[idx(i,  j-1,k,nx_tot,ny_tot)]) / (2.0*params.dy);
+        //double dGdz_c = (G[idx(i,  j,  k+1,nx_tot,ny_tot)] -
+        //                 G[idx(i,  j,  k-1,nx_tot,ny_tot)]) / (2.0*params.dz);
 
-        double grad_mag_inv = rsqrt(eps + dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c);
-        u_eff -= (params.s_l * dGdx_c) * grad_mag_inv;
-        v_eff -= (params.s_l * dGdy_c) * grad_mag_inv;
-        w_eff -= (params.s_l * dGdz_c) * grad_mag_inv;
+        double dGdx_c = (g_tile[i+2][j+1][k+1] - g_tile[i  ][j+1][k+1]) / (2.0*params.dx);
+        double dGdy_c = (g_tile[i+1][j+2][k+1] - g_tile[i+1][j  ][k+1]) / (2.0*params.dy);
+        double dGdz_c = (g_tile[i+1][j+1][k+2] - g_tile[i+1][j+1][k  ]) / (2.0*params.dz);
+
+        double grad_mag_inv{rsqrt(eps + dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c)};
+        u_eff = u_eff - (params.s_l * dGdx_c) * grad_mag_inv;
+        v_eff = v_eff - (params.s_l * dGdy_c) * grad_mag_inv;
+        w_eff = w_eff - (params.s_l * dGdz_c) * grad_mag_inv;
     }
 
     double dGdx = weno5_dx(G, i, j, k, u_eff, params.dx, nx_tot, ny_tot);

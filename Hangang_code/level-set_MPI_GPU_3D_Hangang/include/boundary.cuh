@@ -184,6 +184,102 @@ inline void exchangeYHalo(double* d_G, const SimParams& p, HaloBuffers& hb) {
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
+// Enum to select the optimization mode
+enum HaloOptMode {
+    ORIGINAL = 0,         // Original (Synchronous copy + Host communication)
+    CUDA_AWARE_MPI = 1,   // Optimization 1 (Skip copy + Direct GPU communication)
+    ASYNC_STREAMS = 2     // Optimization 2 (Asynchronous copy + Overlap)
+};
+
+inline void exchangeYHalo_Switchable(double* d_G, const SimParams& p, HaloBuffers& hb, 
+                                     HaloOptMode mode, cudaStream_t stream_below = 0, cudaStream_t stream_above = 0) {
+    int ng = p.nghost;
+    int nx_t = p.nx_total, ny_t = p.ny_total, nz_t = p.nz_total;
+    size_t bytes = hb.halo_size * sizeof(double);
+
+    int threads = 16;
+    dim3 block2d(threads, threads);
+    dim3 grid2d((nx_t + threads - 1) / threads,
+                (nz_t + threads - 1) / threads);
+
+    MPI_Request reqs[4];
+
+    switch (mode) {
+        case ORIGINAL:
+            // [Original Method]: Pack -> Full Sync Wait -> D2H -> MPI -> H2D -> Unpack -> Full Sync Wait
+            packYHalo<<<grid2d, block2d>>>(d_G, hb.d_send_below, ng, ng, nx_t, ny_t, nz_t);
+            packYHalo<<<grid2d, block2d>>>(d_G, hb.d_send_above, p.local_ny, ng, nx_t, ny_t, nz_t);
+            CUDA_CHECK(cudaDeviceSynchronize()); // Bottleneck 1
+
+            CUDA_CHECK(cudaMemcpy(hb.h_send_below, hb.d_send_below, bytes, cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(hb.h_send_above, hb.d_send_above, bytes, cudaMemcpyDeviceToHost));
+
+            MPI_CHECK(MPI_Isend(hb.h_send_below, hb.halo_size, MPI_DOUBLE, p.neighbor_below, 0, MPI_COMM_WORLD, &reqs[0]));
+            MPI_CHECK(MPI_Irecv(hb.h_recv_below, hb.halo_size, MPI_DOUBLE, p.neighbor_below, 1, MPI_COMM_WORLD, &reqs[1]));
+            MPI_CHECK(MPI_Isend(hb.h_send_above, hb.halo_size, MPI_DOUBLE, p.neighbor_above, 1, MPI_COMM_WORLD, &reqs[2]));
+            MPI_CHECK(MPI_Irecv(hb.h_recv_above, hb.halo_size, MPI_DOUBLE, p.neighbor_above, 0, MPI_COMM_WORLD, &reqs[3]));
+            MPI_CHECK(MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE));
+
+            CUDA_CHECK(cudaMemcpy(hb.d_recv_below, hb.h_recv_below, bytes, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(hb.d_recv_above, hb.h_recv_above, bytes, cudaMemcpyHostToDevice));
+
+            unpackYHalo<<<grid2d, block2d>>>(d_G, hb.d_recv_below, 0, ng, nx_t, ny_t, nz_t);
+            unpackYHalo<<<grid2d, block2d>>>(d_G, hb.d_recv_above, ng + p.local_ny, ng, nx_t, ny_t, nz_t);
+            CUDA_CHECK(cudaDeviceSynchronize()); // Bottleneck 2
+            break;
+
+        case CUDA_AWARE_MPI:
+            // [Optimization 1]: Completely remove cudaMemcpy and use GPU pointers (d_send, d_recv) directly for MPI
+            packYHalo<<<grid2d, block2d>>>(d_G, hb.d_send_below, ng, ng, nx_t, ny_t, nz_t);
+            packYHalo<<<grid2d, block2d>>>(d_G, hb.d_send_above, p.local_ny, ng, nx_t, ny_t, nz_t);
+            CUDA_CHECK(cudaDeviceSynchronize()); 
+
+            // Note: Using hb.d_send instead of hb.h_send!
+            MPI_CHECK(MPI_Isend(hb.d_send_below, hb.halo_size, MPI_DOUBLE, p.neighbor_below, 0, MPI_COMM_WORLD, &reqs[0]));
+            MPI_CHECK(MPI_Irecv(hb.d_recv_below, hb.halo_size, MPI_DOUBLE, p.neighbor_below, 1, MPI_COMM_WORLD, &reqs[1]));
+            MPI_CHECK(MPI_Isend(hb.d_send_above, hb.halo_size, MPI_DOUBLE, p.neighbor_above, 1, MPI_COMM_WORLD, &reqs[2]));
+            MPI_CHECK(MPI_Irecv(hb.d_recv_above, hb.halo_size, MPI_DOUBLE, p.neighbor_above, 0, MPI_COMM_WORLD, &reqs[3]));
+            MPI_CHECK(MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE));
+
+            unpackYHalo<<<grid2d, block2d>>>(d_G, hb.d_recv_below, 0, ng, nx_t, ny_t, nz_t);
+            unpackYHalo<<<grid2d, block2d>>>(d_G, hb.d_recv_above, ng + p.local_ny, ng, nx_t, ny_t, nz_t);
+            CUDA_CHECK(cudaDeviceSynchronize());
+            break;
+
+        case ASYNC_STREAMS:
+            // [Optimization 2]: Separate top/bottom tasks into different streams to overlap packing and memory copies
+            // Step 1: Stream-separated packing and async copy (D2H)
+            packYHalo<<<grid2d, block2d, 0, stream_below>>>(d_G, hb.d_send_below, ng, ng, nx_t, ny_t, nz_t);
+            CUDA_CHECK(cudaMemcpyAsync(hb.h_send_below, hb.d_send_below, bytes, cudaMemcpyDeviceToHost, stream_below));
+
+            packYHalo<<<grid2d, block2d, 0, stream_above>>>(d_G, hb.d_send_above, p.local_ny, ng, nx_t, ny_t, nz_t);
+            CUDA_CHECK(cudaMemcpyAsync(hb.h_send_above, hb.d_send_above, bytes, cudaMemcpyDeviceToHost, stream_above));
+
+            // Wait for copies to finish before MPI communication
+            CUDA_CHECK(cudaStreamSynchronize(stream_below));
+            CUDA_CHECK(cudaStreamSynchronize(stream_above));
+
+            // Step 2: MPI Communication (Host memory)
+            MPI_CHECK(MPI_Isend(hb.h_send_below, hb.halo_size, MPI_DOUBLE, p.neighbor_below, 0, MPI_COMM_WORLD, &reqs[0]));
+            MPI_CHECK(MPI_Irecv(hb.h_recv_below, hb.halo_size, MPI_DOUBLE, p.neighbor_below, 1, MPI_COMM_WORLD, &reqs[1]));
+            MPI_CHECK(MPI_Isend(hb.h_send_above, hb.halo_size, MPI_DOUBLE, p.neighbor_above, 1, MPI_COMM_WORLD, &reqs[2]));
+            MPI_CHECK(MPI_Irecv(hb.h_recv_above, hb.halo_size, MPI_DOUBLE, p.neighbor_above, 0, MPI_COMM_WORLD, &reqs[3]));
+            MPI_CHECK(MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE));
+
+            // Step 3: Stream-separated async copy (H2D) and unpacking
+            CUDA_CHECK(cudaMemcpyAsync(hb.d_recv_below, hb.h_recv_below, bytes, cudaMemcpyHostToDevice, stream_below));
+            unpackYHalo<<<grid2d, block2d, 0, stream_below>>>(d_G, hb.d_recv_below, 0, ng, nx_t, ny_t, nz_t);
+
+            CUDA_CHECK(cudaMemcpyAsync(hb.d_recv_above, hb.h_recv_above, bytes, cudaMemcpyHostToDevice, stream_above));
+            unpackYHalo<<<grid2d, block2d, 0, stream_above>>>(d_G, hb.d_recv_above, ng + p.local_ny, ng, nx_t, ny_t, nz_t);
+
+            // Final wait
+            CUDA_CHECK(cudaStreamSynchronize(stream_below));
+            CUDA_CHECK(cudaStreamSynchronize(stream_above));
+            break;
+    }
+}
+
 //=============================================================================
 // Combined Boundary Conditions
 //=============================================================================
@@ -208,7 +304,14 @@ inline void applyBoundaryConditions(double* d_G, SimParams& p, HaloBuffers& hb) 
     CUDA_CHECK(cudaDeviceSynchronize());
 
     // Y halo exchange (MPI)
-    exchangeYHalo(d_G, p, hb);
+    //exchangeYHalo(d_G, p, hb);
+    //  ORIGINAL = 0,         // Original (Synchronous copy + Host communication)
+    //  CUDA_AWARE_MPI = 1,   // Optimization 1 (Skip copy + Direct GPU communication)
+    //  ASYNC_STREAMS = 2     // Optimization 2 (Asynchronous copy + Overlap)
+
+    //exchangeYHalo_Switchable(d_G, p, hb, ORIGINAL);
+    exchangeYHalo_Switchable(d_G, p, hb, CUDA_AWARE_MPI);
+    //exchangeYHalo_Switchable(d_G, p, hb, ASYNC_STREAMS);
 }
 
 inline void applyVelocityBoundaryConditions(double* d_u, double* d_v, double* d_w,

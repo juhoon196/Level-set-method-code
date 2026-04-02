@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/Makefile /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/Makefile)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/src/main.cu /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/src/main.cu)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/boundary.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/boundary.cuh)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/initial_conditions.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/initial_conditions.cuh)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/weno5.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/weno5.cuh)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/config.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/config.cuh)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/rk3.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/rk3.cuh)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/rk3_v1.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/rk3_v1.cuh)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/include/rk3_v2.cuh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/include/rk3_v2.cuh)",
+      "Bash(cp /mnt/c/Users/user/Desktop/Level-set-method-code-main/solver/level-set_MPI_GPU_3D_Hangang_kihang/scripts/run.sh /mnt/c/Users/user/Desktop/Level-set-method-code-main/github_sync/Hangang_code/level-set_MPI_GPU_3D_Hangang/scripts/run.sh)",
+      "Bash(git add:*)"
+    ]
+  }
+}

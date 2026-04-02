@@ -35,24 +35,27 @@ __global__ void computeRHS(const double* __restrict__ G,
         return;
 
     int index = idx(i, j, k, params.nx_total, params.ny_total);
-    double u_eff{u[index]};
-    double v_eff{v[index]};
-    double w_eff{w[index]};
 
-    const double eps{params.epsilon};
-    if (params.s_l > eps) {
-        double dGdx_c = (G[idx(i+1,j,k,params.nx_total,params.ny_total)] -
-                         G[idx(i-1,j,k,params.nx_total,params.ny_total)]) / (2.0*params.dx);
-        double dGdy_c = (G[idx(i,j+1,k,params.nx_total,params.ny_total)] -
-                         G[idx(i,j-1,k,params.nx_total,params.ny_total)]) / (2.0*params.dy);
-        double dGdz_c = (G[idx(i,j,k+1,params.nx_total,params.ny_total)] -
-                         G[idx(i,j,k-1,params.nx_total,params.ny_total)]) / (2.0*params.dz);
+    double u_local = u[index];
+    double v_local = v[index];
+    double w_local = w[index];
 
-        double grad_mag_inv{rsqrt(eps + dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c)};
-        u_eff = (u_eff - params.s_l * dGdx_c) * grad_mag_inv;
-        v_eff = (v_eff - params.s_l * dGdy_c) * grad_mag_inv;
-        w_eff = (w_eff - params.s_l * dGdz_c) * grad_mag_inv;
+    double dGdx_c = 0.0, dGdy_c = 0.0, dGdz_c = 0.0;
+    double grad_mag = 1.0;
+
+    if (params.s_l > params.epsilon) {
+        dGdx_c = (G[idx(i+1,j,k,params.nx_total,params.ny_total)] -
+                   G[idx(i-1,j,k,params.nx_total,params.ny_total)]) / (2.0*params.dx);
+        dGdy_c = (G[idx(i,j+1,k,params.nx_total,params.ny_total)] -
+                   G[idx(i,j-1,k,params.nx_total,params.ny_total)]) / (2.0*params.dy);
+        dGdz_c = (G[idx(i,j,k+1,params.nx_total,params.ny_total)] -
+                   G[idx(i,j,k-1,params.nx_total,params.ny_total)]) / (2.0*params.dz);
+        grad_mag = sqrt(dGdx_c*dGdx_c + dGdy_c*dGdy_c + dGdz_c*dGdz_c + params.epsilon);
     }
+
+    double u_eff = u_local - params.s_l * dGdx_c / grad_mag;
+    double v_eff = v_local - params.s_l * dGdy_c / grad_mag;
+    double w_eff = w_local - params.s_l * dGdz_c / grad_mag;
 
     double dGdx = weno5_dx(G, i, j, k, u_eff, params.dx, params.nx_total, params.ny_total);
     double dGdy = weno5_dy(G, i, j, k, v_eff, params.dy, params.nx_total, params.ny_total);

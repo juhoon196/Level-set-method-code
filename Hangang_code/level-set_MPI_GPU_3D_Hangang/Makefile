@@ -19,10 +19,10 @@ CUDA_ARCH ?= sm_90
 HOST_CXX ?= g++
 
 # MPI paths (auto-detected from mpicxx, override with MPI_INCLUDE / MPI_LIB)
-MPI_INCLUDE ?= $(shell mpicxx --showme:compile 2>/dev/null || echo "-I/usr/lib/x86_64-linux-gnu/openmpi/include")
-MPI_LIB ?= $(shell mpicxx --showme:link 2>/dev/null | sed 's/-Wl,[^ ]*//g')
+MPI_INCLUDE ?= -I/opt/cray/pe/mpich/9.0.1/ofi/nvidia/23.3/include
+MPI_LIB ?= -L/opt/cray/pe/mpich/9.0.1/ofi/nvidia/23.3/lib -lmpi -lmpi_gtl_cuda
 
-NVCC_FLAGS  = -arch=$(CUDA_ARCH) -O3 -std=c++14
+NVCC_FLAGS  = -arch=$(CUDA_ARCH) -O3 -std=c++14 -lineinfo --maxrregcount=64
 NVCC_FLAGS += -ccbin $(HOST_CXX)
 NVCC_FLAGS += -Xcompiler -Wall
 NVCC_FLAGS += --use_fast_math

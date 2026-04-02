@@ -61,8 +61,8 @@ constexpr double W_CONST = 0.0;
 constexpr double DT = 0.0;
 constexpr double CFL = 0.2;
 constexpr double T_FINAL = 1.5;
-constexpr int MAX_STEPS = 1000000;
-constexpr int OUTPUT_INTERVAL = 50;
+constexpr int MAX_STEPS = 200;// 1000000;
+constexpr int OUTPUT_INTERVAL = 100000;
 
 //=============================================================================
 // Reinitialization Parameters

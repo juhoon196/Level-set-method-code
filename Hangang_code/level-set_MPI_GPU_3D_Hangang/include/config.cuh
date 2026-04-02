@@ -23,9 +23,9 @@
 // Grid Configuration (GLOBAL domain)
 //=============================================================================
 
-constexpr int NX = 201;
-constexpr int NY = 201;
-constexpr int NZ = 201;
+constexpr int NX = 512;
+constexpr int NY = 512;
+constexpr int NZ = 512;
 
 constexpr int NGHOST = 3;
 
@@ -61,7 +61,7 @@ constexpr double W_CONST = 0.0;
 constexpr double DT = 0.0;
 constexpr double CFL = 0.2;
 constexpr double T_FINAL = 1.5;
-constexpr int MAX_STEPS = 200;// 1000000;
+constexpr int MAX_STEPS = 1000000;
 constexpr int OUTPUT_INTERVAL = 100000;
 
 //=============================================================================

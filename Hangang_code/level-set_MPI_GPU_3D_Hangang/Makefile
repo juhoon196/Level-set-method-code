@@ -22,7 +22,11 @@ HOST_CXX ?= g++
 MPI_INCLUDE ?= -I/opt/cray/pe/mpich/9.0.1/ofi/nvidia/23.3/include
 MPI_LIB ?= -L/opt/cray/pe/mpich/9.0.1/ofi/nvidia/23.3/lib -lmpi -lmpi_gtl_cuda
 
+# Halo exchange optimization mode (0: Original, 1: CUDA-aware MPI, 2: Async streams)
+MODE ?= 0
+
 NVCC_FLAGS  = -arch=$(CUDA_ARCH) -O3 -std=c++14 -lineinfo --maxrregcount=64
+NVCC_FLAGS += -DHALO_MODE=$(MODE)
 NVCC_FLAGS += -ccbin $(HOST_CXX)
 NVCC_FLAGS += -Xcompiler -Wall
 NVCC_FLAGS += --use_fast_math
@@ -48,7 +52,14 @@ OUTPUT_DIR = output
 
 HEADERS = $(wildcard $(INC_DIR)/*.cuh)
 SOURCES = $(SRC_DIR)/main.cu
-TARGET  = g_equation_solver_mpi_gpu
+
+ifeq ($(MODE),0)
+    TARGET = g_equation_solver_mpi_gpu_mpi
+else ifeq ($(MODE),1)
+    TARGET = g_equation_solver_mpi_gpu_cudampi
+else
+    TARGET = g_equation_solver_mpi_gpu
+endif
 
 #=============================================================================
 # Number of MPI ranks for 'make run'

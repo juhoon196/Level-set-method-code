@@ -303,7 +303,7 @@ int main(int argc, char* argv[]) {
         // Update velocity
         params.current_time = current_time;
         updateDeformationVelocity(d_u, d_v, d_w, params);
-        applyVelocityBoundaryConditions(d_u, d_v, d_w, params, halo);
+        // applyVelocityBoundaryConditions(d_u, d_v, d_w, params, halo);
 
         // RK3 step
         rk3TimeStep(d_G, d_G_new, d_G_1, d_G_2, d_G_rhs,

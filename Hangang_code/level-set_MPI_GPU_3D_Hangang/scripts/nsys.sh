@@ -27,14 +27,6 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 export FI_MR_CACHE_MONITOR=memhooks
 
 
-SOLVER=$(pwd)/g_equation_solver_mpi_gpu_mpi
-srun --mpi=cray_shasta --cpu-bind=none \
-    nsys profile \
-    --output=${LOG_DIR}/profile_mpi_v1_%q{SLURM_PROCID} \
-    --trace=cuda,mpi,nvtx \
-    --force-overwrite true \
-    $SOLVER
-
 SOLVER=$(pwd)/g_equation_solver_mpi_gpu_cudampi
 srun --mpi=cray_shasta --cpu-bind=none \
     nsys profile \
